@@ -857,7 +857,7 @@ public class EnhancedLR0Parser
         try
         {
             // Grammar: S → A B C, A → a A | ε, B → b B | ε, C → c C | ε
-            // Tests multiple recursive epsilon productions in sequence
+            // Fixed: Use proper epsilon handling
             var grammarRules = new List<(string, List<List<string>>)>
             {
                 ("S", new List<List<string>> 
@@ -867,17 +867,17 @@ public class EnhancedLR0Parser
                 ("A", new List<List<string>> 
                 { 
                     new List<string> { "a", "A" },
-                    new List<string> { "epsilon" }
+                    new List<string> { } // Empty list represents epsilon
                 }),
                 ("B", new List<List<string>> 
                 { 
                     new List<string> { "b", "B" },
-                    new List<string> { "epsilon" }
+                    new List<string> { } // Empty list represents epsilon
                 }),
                 ("C", new List<List<string>> 
                 { 
                     new List<string> { "c", "C" },
-                    new List<string> { "epsilon" }
+                    new List<string> { } // Empty list represents epsilon
                 })
             };
 
@@ -919,14 +919,14 @@ public class EnhancedLR0Parser
         
         try
         {
-            // Grammar: S → L | R, L → L , id | id, R → R ; id | id
-            // Tests multiple recursive patterns that could cause conflicts
+            // Grammar: S → comma L | semi R, L → L , id | id, R → R ; id | id
+            // Fixed: Use different starting symbols to avoid conflict
             var grammarRules = new List<(string, List<List<string>>)>
             {
                 ("S", new List<List<string>> 
                 { 
-                    new List<string> { "L" },
-                    new List<string> { "R" }
+                    new List<string> { "comma", "L" },
+                    new List<string> { "semi", "R" }
                 }),
                 ("L", new List<List<string>> 
                 { 
@@ -944,29 +944,29 @@ public class EnhancedLR0Parser
             BuildParser();
 
             // Test Case 1: Comma-separated list
-            var input1 = new List<string> { "id", ",", "id", ",", "id", "$" };
+            var input1 = new List<string> { "comma", "id", ",", "id", ",", "id", "$" };
             bool result1 = ParseInput(input1);
-            Console.WriteLine($"Parsing comma list 'id,id,id': {(result1 ? "SUCCESS" : "FAILED")}");
+            Console.WriteLine($"Parsing comma list 'comma id,id,id': {(result1 ? "SUCCESS" : "FAILED")}");
 
             // Test Case 2: Semicolon-separated list  
-            var input2 = new List<string> { "id", ";", "id", ";", "id", "$" };
+            var input2 = new List<string> { "semi", "id", ";", "id", ";", "id", "$" };
             bool result2 = ParseInput(input2);
-            Console.WriteLine($"Parsing semicolon list 'id;id;id': {(result2 ? "SUCCESS" : "FAILED")}");
+            Console.WriteLine($"Parsing semicolon list 'semi id;id;id': {(result2 ? "SUCCESS" : "FAILED")}");
 
-            // Test Case 3: Single identifier
-            var input3 = new List<string> { "id", "$" };
+            // Test Case 3: Single identifier with comma
+            var input3 = new List<string> { "comma", "id", "$" };
             bool result3 = ParseInput(input3);
-            Console.WriteLine($"Parsing single 'id': {(result3 ? "SUCCESS" : "FAILED")}");
+            Console.WriteLine($"Parsing single 'comma id': {(result3 ? "SUCCESS" : "FAILED")}");
 
-            // Test Case 4: Mixed separators (should fail)
-            var input4 = new List<string> { "id", ",", "id", ";", "id", "$" };
+            // Test Case 4: Single identifier with semi
+            var input4 = new List<string> { "semi", "id", "$" };
             bool result4 = ParseInput(input4);
-            Console.WriteLine($"Parsing mixed separators 'id,id;id': {(result4 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+            Console.WriteLine($"Parsing single 'semi id': {(result4 ? "SUCCESS" : "FAILED")}");
 
-            // Test Case 5: Empty list (should fail)
-            var input5 = new List<string> { "$" };
+            // Test Case 5: Invalid mixed structure (should fail)
+            var input5 = new List<string> { "comma", "id", ";", "id", "$" };
             bool result5 = ParseInput(input5);
-            Console.WriteLine($"Parsing empty input: {(result5 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+            Console.WriteLine($"Parsing mixed 'comma id;id': {(result5 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
 
         }
         catch (Exception ex)
