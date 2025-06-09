@@ -765,6 +765,15 @@ public class EnhancedLR0Parser
         // Test 2: Error handling
         TestErrorHandling();
         
+        // Test 3: Complex nested structures with multiple epsilon productions
+        TestComplexNestedEpsilon();
+        
+        // Test 4: Multiple recursive patterns with conflict detection
+        TestMultipleRecursivePatterns();
+        
+        // Test 5: Deep nesting with mixed operators and precedence
+        TestDeepNestingWithMixedOperators();
+        
         Console.WriteLine("=== All Tests Completed ===\n");
     }
 
@@ -836,6 +845,211 @@ public class EnhancedLR0Parser
         catch (Exception ex)
         {
             Console.WriteLine($"ERROR: Unexpected exception: {ex.Message}");
+        }
+        
+        Console.WriteLine();
+    }
+
+    private void TestComplexNestedEpsilon()
+    {
+        Console.WriteLine("Test 3: Complex Nested Structures with Multiple Epsilon Productions");
+        
+        try
+        {
+            // Grammar: S → A B C, A → a A | ε, B → b B | ε, C → c C | ε
+            // Tests multiple recursive epsilon productions in sequence
+            var grammarRules = new List<(string, List<List<string>>)>
+            {
+                ("S", new List<List<string>> 
+                { 
+                    new List<string> { "A", "B", "C" }
+                }),
+                ("A", new List<List<string>> 
+                { 
+                    new List<string> { "a", "A" },
+                    new List<string> { "epsilon" }
+                }),
+                ("B", new List<List<string>> 
+                { 
+                    new List<string> { "b", "B" },
+                    new List<string> { "epsilon" }
+                }),
+                ("C", new List<List<string>> 
+                { 
+                    new List<string> { "c", "C" },
+                    new List<string> { "epsilon" }
+                })
+            };
+
+            LoadGrammar(grammarRules);
+            BuildParser();
+
+            // Test Case 1: All epsilon productions
+            var input1 = new List<string> { "$" };
+            bool result1 = ParseInput(input1);
+            Console.WriteLine($"Parsing empty string (all epsilon): {(result1 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 2: Mixed epsilon and non-epsilon
+            var input2 = new List<string> { "a", "b", "$" };
+            bool result2 = ParseInput(input2);
+            Console.WriteLine($"Parsing 'a b' (C → ε): {(result2 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 3: Multiple recursions
+            var input3 = new List<string> { "a", "a", "b", "b", "c", "c", "$" };
+            bool result3 = ParseInput(input3);
+            Console.WriteLine($"Parsing 'a a b b c c': {(result3 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 4: Invalid sequence
+            var input4 = new List<string> { "a", "c", "b", "$" };
+            bool result4 = ParseInput(input4);
+            Console.WriteLine($"Parsing 'a c b' (wrong order): {(result4 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Test 3 failed with exception: {ex.Message}");
+        }
+        
+        Console.WriteLine();
+    }
+
+    private void TestMultipleRecursivePatterns()
+    {
+        Console.WriteLine("Test 4: Multiple Recursive Patterns with Conflict Detection");
+        
+        try
+        {
+            // Grammar: S → L | R, L → L , id | id, R → R ; id | id
+            // Tests multiple recursive patterns that could cause conflicts
+            var grammarRules = new List<(string, List<List<string>>)>
+            {
+                ("S", new List<List<string>> 
+                { 
+                    new List<string> { "L" },
+                    new List<string> { "R" }
+                }),
+                ("L", new List<List<string>> 
+                { 
+                    new List<string> { "L", ",", "id" },
+                    new List<string> { "id" }
+                }),
+                ("R", new List<List<string>> 
+                { 
+                    new List<string> { "R", ";", "id" },
+                    new List<string> { "id" }
+                })
+            };
+
+            LoadGrammar(grammarRules);
+            BuildParser();
+
+            // Test Case 1: Comma-separated list
+            var input1 = new List<string> { "id", ",", "id", ",", "id", "$" };
+            bool result1 = ParseInput(input1);
+            Console.WriteLine($"Parsing comma list 'id,id,id': {(result1 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 2: Semicolon-separated list  
+            var input2 = new List<string> { "id", ";", "id", ";", "id", "$" };
+            bool result2 = ParseInput(input2);
+            Console.WriteLine($"Parsing semicolon list 'id;id;id': {(result2 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 3: Single identifier
+            var input3 = new List<string> { "id", "$" };
+            bool result3 = ParseInput(input3);
+            Console.WriteLine($"Parsing single 'id': {(result3 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 4: Mixed separators (should fail)
+            var input4 = new List<string> { "id", ",", "id", ";", "id", "$" };
+            bool result4 = ParseInput(input4);
+            Console.WriteLine($"Parsing mixed separators 'id,id;id': {(result4 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+
+            // Test Case 5: Empty list (should fail)
+            var input5 = new List<string> { "$" };
+            bool result5 = ParseInput(input5);
+            Console.WriteLine($"Parsing empty input: {(result5 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Test 4 failed with exception: {ex.Message}");
+        }
+        
+        Console.WriteLine();
+    }
+
+    private void TestDeepNestingWithMixedOperators()
+    {
+        Console.WriteLine("Test 5: Deep Nesting with Mixed Operators and Precedence");
+        
+        try
+        {
+            // Grammar: S → E, E → E + T | E - T | T, T → T * F | T / F | F, F → - F | + F | ( E ) | id | num
+            // Tests complex operator precedence with unary operators and deep nesting
+            var grammarRules = new List<(string, List<List<string>>)>
+            {
+                ("S", new List<List<string>> 
+                { 
+                    new List<string> { "E" }
+                }),
+                ("E", new List<List<string>> 
+                { 
+                    new List<string> { "E", "+", "T" },
+                    new List<string> { "E", "-", "T" },
+                    new List<string> { "T" }
+                }),
+                ("T", new List<List<string>> 
+                { 
+                    new List<string> { "T", "*", "F" },
+                    new List<string> { "T", "/", "F" },
+                    new List<string> { "F" }
+                }),
+                ("F", new List<List<string>> 
+                { 
+                    new List<string> { "-", "F" },
+                    new List<string> { "+", "F" },
+                    new List<string> { "(", "E", ")" },
+                    new List<string> { "id" },
+                    new List<string> { "num" }
+                })
+            };
+
+            LoadGrammar(grammarRules);
+            BuildParser();
+
+            // Test Case 1: Complex nested expression with unary operators
+            var input1 = new List<string> { "(", "-", "id", "+", "num", ")", "*", "-", "(", "id", "/", "num", ")", "$" };
+            bool result1 = ParseInput(input1);
+            Console.WriteLine($"Parsing '(-id + num) * -(id / num)': {(result1 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 2: Multiple levels of nesting
+            var input2 = new List<string> { "(", "(", "(", "id", ")", ")", ")", "$" };
+            bool result2 = ParseInput(input2);
+            Console.WriteLine($"Parsing '(((id)))': {(result2 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 3: Unary operator chains
+            var input3 = new List<string> { "-", "+", "-", "id", "$" };
+            bool result3 = ParseInput(input3);
+            Console.WriteLine($"Parsing '-+-id': {(result3 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 4: Complex operator precedence
+            var input4 = new List<string> { "id", "+", "num", "*", "id", "-", "num", "/", "id", "$" };
+            bool result4 = ParseInput(input4);
+            Console.WriteLine($"Parsing 'id + num * id - num / id': {(result4 ? "SUCCESS" : "FAILED")}");
+
+            // Test Case 5: Unbalanced parentheses (should fail)
+            var input5 = new List<string> { "(", "id", "+", "num", "$" };
+            bool result5 = ParseInput(input5);
+            Console.WriteLine($"Parsing '(id + num' (unbalanced): {(result5 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+
+            // Test Case 6: Invalid operator sequence (should fail)
+            var input6 = new List<string> { "id", "+", "*", "num", "$" };
+            bool result6 = ParseInput(input6);
+            Console.WriteLine($"Parsing 'id + * num' (invalid): {(result6 ? "UNEXPECTED SUCCESS" : "CORRECTLY FAILED")}");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Test 5 failed with exception: {ex.Message}");
         }
         
         Console.WriteLine();
