@@ -129,10 +129,9 @@ public class EnhancedLR0Parser
                 if (rhs == null)
                     throw new ArgumentException($"RHS cannot be null for production {lhs}");
 
-                var cleanRhs = rhs.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-                if (!cleanRhs.Any())
-                    cleanRhs = new List<string> { EPSILON };
-
+                // --- NEW CODE ---
+                // Filter out the "epsilon" keyword to create a truly empty RHS for epsilon-productions.
+                var cleanRhs = rhs.Where(s => !string.IsNullOrWhiteSpace(s) && s != EPSILON).ToList();
                 grammar.Add(new Production(lhs, cleanRhs));
 
                 // Identify terminals
@@ -241,10 +240,18 @@ public class EnhancedLR0Parser
                              .Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)
                              .ToList();
             
-            if (!symbols.Any())
-                symbols.Add(EPSILON);
-                
-            rhsList.Add(symbols);
+            // --- NEW CODE ---
+            // If symbols are empty, it already represents an epsilon production.
+            // The new LoadGrammar logic handles this correctly, so no explicit "epsilon" string is needed.
+            if (!symbols.Any() && part.Trim().Length == 0)
+            {
+                // Add an empty list to signify an epsilon production.
+                rhsList.Add(new List<string>());
+            }
+            else
+            {
+                rhsList.Add(symbols);
+            }
         }
 
         return (lhs, rhsList);
@@ -625,8 +632,9 @@ public class EnhancedLR0Parser
                     int prodIndex = int.Parse(action.Substring(1));
                     var production = grammar[prodIndex];
                     
-                    int popCount = (production.RHS.Count == 1 && production.RHS[0] == EPSILON) ? 
-                                   0 : production.RHS.Count;
+                    // --- NEW CODE ---
+                    // With an empty RHS for epsilon, the pop count is simply the number of symbols.
+                    int popCount = production.RHS.Count;
 
                     for (int i = 0; i < popCount; i++)
                     {
@@ -850,14 +858,14 @@ public class EnhancedLR0Parser
         Console.WriteLine();
     }
 
-    private void TestComplexNestedEpsilon()
+private void TestComplexNestedEpsilon()
     {
         Console.WriteLine("Test 3: Complex Nested Structures with Multiple Epsilon Productions");
         
         try
         {
             // Grammar: S → A B C, A → a A | ε, B → b B | ε, C → c C | ε
-            // Fixed: Use proper epsilon handling
+            // Tests multiple recursive epsilon productions in sequence
             var grammarRules = new List<(string, List<List<string>>)>
             {
                 ("S", new List<List<string>> 
@@ -867,17 +875,17 @@ public class EnhancedLR0Parser
                 ("A", new List<List<string>> 
                 { 
                     new List<string> { "a", "A" },
-                    new List<string> { } // Empty list represents epsilon
+                    new List<string> { "epsilon" }
                 }),
                 ("B", new List<List<string>> 
                 { 
                     new List<string> { "b", "B" },
-                    new List<string> { } // Empty list represents epsilon
+                    new List<string> { "epsilon" }
                 }),
                 ("C", new List<List<string>> 
                 { 
                     new List<string> { "c", "C" },
-                    new List<string> { } // Empty list represents epsilon
+                    new List<string> { "epsilon" }
                 })
             };
 
